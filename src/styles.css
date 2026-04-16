@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-primary: #176f5b;
+  --brand-primary-hover: #0f5848;
+  --brand-primary-soft: #e7f4ef;
+  --bg-main: #f8fafc;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-soft: #e2e8f0;
+  
+  color: var(--text-main);
+  background: var(--bg-main);
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+@layer components {
+  .btn-primary {
+    @apply flex items-center justify-center gap-2 rounded-lg bg-[#176f5b] font-bold text-white transition-all hover:bg-[#0f5848] active:scale-[0.98] disabled:opacity-50;
+  }
+  
+  .card-premium {
+    @apply rounded-xl border border-slate-200 bg-white shadow-soft transition-all hover:shadow-lg;
+  }
+  
+  .glass-dark {
+    @apply bg-[#172033]/80 backdrop-blur-md;
+  }
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #2f80ed;
+  outline-offset: 2px;
+}
+
+.transition-premium {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
