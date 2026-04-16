@@ -26,7 +26,8 @@ export function Icon({ name, className = "h-5 w-5" }) {
     trash: <><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></>,
     edit: <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />,
     "heart-filled": <path d="M20.8 5.6a5.2 5.2 0 0 0-7.4 0L12 7l-1.4-1.4a5.2 5.2 0 1 0-7.4 7.4L12 21l8.8-8a5.2 5.2 0 0 0 0-7.4z" fill="currentColor" />,
-    "arrow-down": <path d="M12 5v14m-7-7 7 7 7-7" />
+    "arrow-down": <path d="M12 5v14m-7-7 7 7 7-7" />,
+    filter: <><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></>
   };
 
   return <svg {...common}>{paths[name] || paths.search}</svg>;

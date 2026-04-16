@@ -12,8 +12,8 @@ import { selectFavoriteIds, setFavorites } from "../favorites/favoritesSlice";
 import { setNotice } from "../ui/uiSlice";
 import { apiRequest } from "../../services/api";
 import { PetCard } from "./PetCard";
-import { PetDetailModal } from "./PetDetailModal";
 import { PetForm } from "./PetForm";
+import { setActiveView } from "../ui/uiSlice";
 
 export function PetsView() {
   const dispatch = useDispatch();
@@ -26,17 +26,21 @@ export function PetsView() {
     size: "",
     location: "",
     status: "available",
-    type: "", // Default determined by role in useEffect
+    type: "", 
     sortBy: "createdAt",
     sortOrder: "desc"
   });
+  const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [selectedPet, setSelectedPet] = useState(null);
 
   const notify = (message) => dispatch(setNotice(message));
+
+  const viewPetDetails = (pet) => {
+    dispatch(setActiveView({ view: "petDetail", params: { pet } }));
+  };
 
   const loadPets = async (pageToLoad = page) => {
     setLoading(true);
@@ -57,7 +61,6 @@ export function PetsView() {
   };
 
   useEffect(() => {
-    // Set default type based on role once on mount
     if (!filters.type) {
       if (auth.user.role === "adopter") {
         setFilters(prev => ({ ...prev, type: "adoption" }));
@@ -65,7 +68,7 @@ export function PetsView() {
         setFilters(prev => ({ ...prev, type: "foster" }));
       }
     }
-  }, []); // Only once on mount
+  }, []);
 
   useEffect(() => {
     loadPets();
@@ -73,7 +76,6 @@ export function PetsView() {
 
   const toggleFavorite = async (petId) => {
     if (auth.user.role !== "adopter") return;
-
     try {
       const isFavorite = favoriteIds.includes(petId);
       const favorites = await apiRequest(`/api/users/favorites/${petId}`, {
@@ -93,97 +95,113 @@ export function PetsView() {
       <SectionHeader
         eyebrow="Search and listings"
         title="Available pets"
-        action={auth.user.role === "shelter" ? (
-          <button onClick={() => setShowForm(true)} className="flex h-11 items-center gap-2 rounded bg-[#176f5b] px-4 font-bold text-white">
-            <Icon name="plus" />
-            Add pet
-          </button>
-        ) : null}
-      />
-
-      <div className="mb-8 grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-soft sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-        <Field label="Breed" value={filters.breed} onChange={(breed) => setFilters({ ...filters, breed })} placeholder="E.g. Lab" />
-        <Field label="Max Age" type="number" value={filters.age} onChange={(age) => setFilters({ ...filters, age })} placeholder="E.g. 5" />
-
-        <label className="block">
-          <span className="mb-2.5 block text-sm font-bold text-slate-700">Size</span>
-          <select
-            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium outline-none transition-premium focus:border-[#176f5b] focus:ring-4 focus:ring-[#176f5b]/5"
-            value={filters.size}
-            onChange={(event) => setFilters({ ...filters, size: event.target.value })}
-          >
-            <option value="">All sizes</option>
-            {petSizes.map((size) => (
-              <option key={size.value} value={size.value}>{size.label}</option>
-            ))}
-          </select>
-        </label>
-
-        <Field label="Location" value={filters.location} onChange={(location) => setFilters({ ...filters, location })} placeholder="E.g. Mumbai" />
-
-        <label className="block">
-          <span className="mb-2.5 block text-sm font-bold text-slate-700">Status</span>
-          <select
-            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium outline-none transition-premium focus:border-[#176f5b] focus:ring-4 focus:ring-[#176f5b]/5"
-            value={filters.status}
-            onChange={(event) => setFilters({ ...filters, status: event.target.value })}
-          >
-            <option value="">Any</option>
-            <option value="available">Available</option>
-            <option value="fostered">Fostered</option>
-            <option value="adopted">Adopted</option>
-          </select>
-        </label>
-
-        {auth.user.role === "shelter" && (
-          <label className="block">
-            <span className="mb-2.5 block text-sm font-bold text-slate-700">Listing Type</span>
-            <select
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium outline-none transition-premium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 text-slate-900"
-              value={filters.type}
-              onChange={(event) => setFilters({ ...filters, type: event.target.value })}
-            >
-              <option value="">All Types</option>
-              <option value="adoption">Adoption</option>
-              <option value="foster">Foster</option>
-            </select>
-          </label>
-        )}
-
-        <div className="flex flex-col">
-          <span className="mb-2.5 block text-sm font-bold text-slate-700">Sort & Order</span>
-          <div className="flex gap-2">
-            <select
-              className="h-12 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium outline-none transition-premium focus:border-[#176f5b] focus:ring-4 focus:ring-[#176f5b]/5"
-              value={filters.sortBy}
-              onChange={(event) => setFilters({ ...filters, sortBy: event.target.value })}
-            >
-              <option value="createdAt">Date listed</option>
-              <option value="age">Age</option>
-              <option value="name">Name</option>
-            </select>
+        action={
+          <div className="flex gap-3">
             <button
-              type="button"
-              title={filters.sortOrder === "asc" ? "Sort Ascending" : "Sort Descending"}
-              onClick={() => setFilters({ ...filters, sortOrder: filters.sortOrder === "asc" ? "desc" : "asc" })}
+              onClick={() => setShowFilters(!showFilters)}
               className={classNames(
-                "flex h-12 w-12 items-center justify-center rounded-xl border transition-premium",
-                filters.sortOrder === "asc" ? "border-[#176f5b] bg-[#e7f4ef] text-[#176f5b]" : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                "flex h-11 items-center gap-2 rounded-xl px-4 font-bold transition-premium border-2 outline-none",
+                showFilters ? "border-[#176f5b] text-[#176f5b] bg-[#e7f4ef]" : "border-slate-200 text-slate-700 bg-white hover:border-slate-300 hover:text-slate-900"
               )}
             >
-              <Icon name="arrow-down" className={classNames("h-5 w-5 transition-transform", filters.sortOrder === "asc" ? "rotate-180" : "")} />
+              <Icon name="filter" />
+              Filters
             </button>
+            {auth.user.role === "shelter" ? (
+              <button onClick={() => setShowForm(true)} className="flex h-11 items-center gap-2 rounded-xl bg-[#176f5b] px-4 font-bold text-white shadow-lg shadow-[#176f5b]/20 hover:bg-[#0f5848] transition-premium outline-none">
+                <Icon name="plus" />
+                Add pet
+              </button>
+            ) : null}
           </div>
-        </div>
+        }
+      />
 
-        <div className="flex items-end">
-          <button
-            onClick={() => { setPage(1); loadPets(1); }}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#176f5b] font-black text-white shadow-lg shadow-[#176f5b]/20 transition-premium hover:bg-[#0f5848] active:scale-[0.98]"
-          >
-            <Icon name="search" />
-            Apply Filters
-          </button>
+      <div className={classNames("grid transition-all duration-500 overflow-hidden", showFilters ? "grid-rows-[1fr] opacity-100 mb-8" : "grid-rows-[0fr] opacity-0")}>
+        <div className="min-h-0">
+          <div className="grid gap-4 rounded-3xl border border-slate-200/60 bg-white/60 p-6 shadow-xl backdrop-blur-xl sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Breed" value={filters.breed} onChange={(breed) => setFilters({ ...filters, breed })} placeholder="E.g. Lab" />
+            <Field label="Max Age" type="number" value={filters.age} onChange={(age) => setFilters({ ...filters, age })} placeholder="E.g. 5" />
+
+            <label className="block">
+              <span className="mb-2.5 block text-sm font-bold text-slate-700">Size</span>
+              <select
+                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium outline-none transition-premium focus:border-[#176f5b] focus:ring-4 focus:ring-[#176f5b]/5"
+                value={filters.size}
+                onChange={(event) => setFilters({ ...filters, size: event.target.value })}
+              >
+                <option value="">All sizes</option>
+                {petSizes.map((size) => (
+                  <option key={size.value} value={size.value}>{size.label}</option>
+                ))}
+              </select>
+            </label>
+
+            <Field label="Location" value={filters.location} onChange={(location) => setFilters({ ...filters, location })} placeholder="E.g. Mumbai" />
+
+            <label className="block">
+              <span className="mb-2.5 block text-sm font-bold text-slate-700">Status</span>
+              <select
+                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium outline-none transition-premium focus:border-[#176f5b] focus:ring-4 focus:ring-[#176f5b]/5"
+                value={filters.status}
+                onChange={(event) => setFilters({ ...filters, status: event.target.value })}
+              >
+                <option value="">Any</option>
+                <option value="available">Available</option>
+                <option value="fostered">Fostered</option>
+                <option value="adopted">Adopted</option>
+              </select>
+            </label>
+
+            {auth.user.role === "shelter" && (
+              <label className="block">
+                <span className="mb-2.5 block text-sm font-bold text-slate-700">Listing Type</span>
+                <select
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium outline-none transition-premium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 text-slate-900"
+                  value={filters.type}
+                  onChange={(event) => setFilters({ ...filters, type: event.target.value })}
+                >
+                  <option value="">All Types</option>
+                  <option value="adoption">Adoption</option>
+                  <option value="foster">Foster</option>
+                </select>
+              </label>
+            )}
+
+            <div className="flex flex-col lg:col-span-2 mt-auto">
+              <span className="mb-2.5 block text-sm font-bold text-slate-700">Sort & Order</span>
+              <div className="flex gap-2">
+                <select
+                  className="h-12 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium outline-none transition-premium focus:border-[#176f5b] focus:ring-4 focus:ring-[#176f5b]/5"
+                  value={filters.sortBy}
+                  onChange={(event) => setFilters({ ...filters, sortBy: event.target.value })}
+                >
+                  <option value="createdAt">Date listed</option>
+                  <option value="age">Age</option>
+                  <option value="name">Name</option>
+                </select>
+                <button
+                  type="button"
+                  title={filters.sortOrder === "asc" ? "Sort Ascending" : "Sort Descending"}
+                  onClick={() => setFilters({ ...filters, sortOrder: filters.sortOrder === "asc" ? "desc" : "asc" })}
+                  className={classNames(
+                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-premium",
+                    filters.sortOrder === "asc" ? "border-[#176f5b] bg-[#e7f4ef] text-[#176f5b]" : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                  )}
+                >
+                  <Icon name="arrow-down" className={classNames("h-5 w-5 transition-transform", filters.sortOrder === "asc" ? "rotate-180" : "")} />
+                </button>
+                <button
+                  onClick={() => { setPage(1); loadPets(1); }}
+                  className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#176f5b] font-black text-white shadow-lg shadow-[#176f5b]/20 transition-premium hover:bg-[#0f5848] active:scale-[0.98]"
+                >
+                  <Icon name="search" />
+                  Search
+                </button>
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
 
@@ -198,27 +216,27 @@ export function PetsView() {
             image={pet.images?.[0] || sampleImages[index % sampleImages.length]}
             isFavorite={favoriteIds.includes(pet._id)}
             onFavorite={() => toggleFavorite(pet._id)}
-            onSelect={() => setSelectedPet(pet)}
+            onSelect={() => viewPetDetails(pet)}
             role={auth.user.role}
           />
         ))}
       </div>
 
       {!loading && pagination.totalPages > 1 ? (
-        <div className="mt-6 flex flex-col items-center justify-between gap-3 rounded border border-slate-200 bg-white p-4 shadow-soft sm:flex-row">
+        <div className="mt-8 flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200/60 bg-white/60 p-4 shadow-soft backdrop-blur-xl sm:flex-row">
           <p className="text-sm font-bold text-slate-600">
             Page {page} of {pagination.totalPages} · {pagination.total} pets
           </p>
           <div className="flex gap-2">
             <button
-              className="h-10 rounded border border-slate-300 px-4 font-bold text-slate-700 disabled:opacity-40"
+              className="h-10 rounded-xl border border-slate-300 px-5 font-bold text-slate-700 transition-premium hover:bg-slate-50 active:scale-95 disabled:opacity-40"
               disabled={page <= 1}
               onClick={() => setPage((current) => Math.max(current - 1, 1))}
             >
               Previous
             </button>
             <button
-              className="h-10 rounded border border-slate-300 px-4 font-bold text-slate-700 disabled:opacity-40"
+              className="h-10 rounded-xl border border-slate-300 px-5 font-bold text-slate-700 transition-premium hover:bg-slate-50 active:scale-95 disabled:opacity-40"
               disabled={page >= pagination.totalPages}
               onClick={() => setPage((current) => Math.min(current + 1, pagination.totalPages))}
             >
@@ -229,17 +247,6 @@ export function PetsView() {
       ) : null}
 
       {showForm ? <PetForm token={auth.token} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); loadPets(); notify("Pet listing saved."); }} /> : null}
-      {selectedPet ? (
-        <PetDetailModal
-          pet={selectedPet}
-          auth={auth}
-          isFavorite={favoriteIds.includes(selectedPet._id)}
-          onFavorite={() => toggleFavorite(selectedPet._id)}
-          onClose={() => setSelectedPet(null)}
-          notify={notify}
-          onRefresh={loadPets}
-        />
-      ) : null}
     </section>
   );
 }

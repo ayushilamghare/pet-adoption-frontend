@@ -4,19 +4,19 @@ import { NoticeToast } from "./components/layout/NoticeToast";
 import { ApplicationsView } from "./features/applications/ApplicationsView";
 import { AuthScreen } from "./features/auth/AuthScreen";
 import { selectCurrentUser } from "./features/auth/authSlice";
-import { FosterView } from "./features/foster/FosterView";
 import { FavoritesView } from "./features/favorites/FavoritesView";
 import { MessagesView } from "./features/messages/MessagesView";
 import { PetsView } from "./features/pets/PetsView";
 import { ProfileView } from "./features/profile/ProfileView";
 import { ReviewsView } from "./features/reviews/ReviewsView";
-import { selectActiveView } from "./features/ui/uiSlice";
+import { selectActiveView, selectActiveParams } from "./features/ui/uiSlice";
+import { PetDetailView } from "./features/pets/PetDetailView";
 
 const viewComponents = {
   pets: PetsView,
+  petDetail: PetDetailView,
   favorites: FavoritesView,
   applications: ApplicationsView,
-  foster: FosterView,
   messages: MessagesView,
   reviews: ReviewsView,
   profile: ProfileView

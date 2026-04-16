@@ -8,13 +8,11 @@ import { setNotice, setActiveView } from "../ui/uiSlice";
 import { selectFavoritePets, setFavorites } from "./favoritesSlice";
 import { apiRequest } from "../../services/api";
 import { PetCard } from "../pets/PetCard";
-import { PetDetailModal } from "../pets/PetDetailModal";
 
 export function FavoritesView() {
   const dispatch = useDispatch();
   const auth = useSelector(selectAuth);
   const favoritePets = useSelector(selectFavoritePets);
-  const [selectedPet, setSelectedPet] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const notify = (message) => dispatch(setNotice(message));
@@ -72,13 +70,11 @@ export function FavoritesView() {
             image={pet.images?.[0] || sampleImages[index % sampleImages.length]}
             isFavorite
             onFavorite={() => removeFavorite(pet._id)}
-            onSelect={() => setSelectedPet(pet)}
+            onSelect={() => dispatch(setActiveView({ view: "petDetail", params: { pet } }))}
             role="adopter"
           />
         ))}
       </div>
-
-      {selectedPet ? <PetDetailModal pet={selectedPet} auth={auth} onClose={() => setSelectedPet(null)} notify={notify} /> : null}
     </section>
   );
 }
