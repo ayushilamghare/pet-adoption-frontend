@@ -25,7 +25,7 @@ export function PetsView() {
     age: "",
     size: "",
     location: "",
-    status: "available",
+    status: "",
     type: "", 
     sortBy: "createdAt",
     sortOrder: "desc"

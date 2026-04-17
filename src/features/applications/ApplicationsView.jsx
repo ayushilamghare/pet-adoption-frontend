@@ -74,6 +74,16 @@ export function ApplicationsView() {
     ? applications.filter(app => app.type === activeTab)
     : applications;
 
+  // Group by pet if shelter
+  const groupedByPet = isShelter ? displayedApplications.reduce((acc, app) => {
+    const petId = app.pet?._id;
+    if (!acc[petId]) acc[petId] = { pet: app.pet, applications: [] };
+    acc[petId].applications.push(app);
+    return acc;
+  }, {}) : null;
+
+  const groupedApplications = isShelter ? Object.values(groupedByPet) : null;
+
   return (
     <section>
       <SectionHeader 
@@ -106,17 +116,44 @@ export function ApplicationsView() {
 
       {loading ? <StateLine text="Loading applications" /> : null}
 
-      <div className="grid gap-6">
-        {displayedApplications.map((application) => (
-          <ApplicationRow 
-            key={application._id} 
-            application={application} 
-            role={auth.user.role} 
-            onUpdate={updateStatus} 
-            onViewPet={() => viewPetDetails(application.pet)} 
-          />
-        ))}
-      </div>
+      {isShelter ? (
+        <div className="grid gap-8">
+          {groupedApplications.map((group) => (
+            <div key={group.pet._id} className="rounded-3xl bg-slate-50/50 p-6 border border-slate-200/60 shadow-inner">
+              <div className="mb-6 flex items-center justify-between border-b border-slate-200 pb-4">
+                 <div className="flex items-center gap-3">
+                   <h3 className="text-xl font-black text-slate-800">{group.pet.name}</h3>
+                   <span className="text-xs font-bold uppercase tracking-widest text-slate-400 bg-white border border-slate-200 px-3 py-1 rounded-full">{group.applications.length} Requests</span>
+                 </div>
+                 <button onClick={() => viewPetDetails(group.pet)} className="text-sm font-bold text-[#176f5b] hover:underline transition-premium">View Pet Details →</button>
+              </div>
+              <div className="grid gap-6">
+                {group.applications.map((application) => (
+                  <ApplicationRow 
+                    key={application._id} 
+                    application={application} 
+                    role={auth.user.role} 
+                    onUpdate={updateStatus} 
+                    onViewPet={() => viewPetDetails(application.pet)} 
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-6">
+          {displayedApplications.map((application) => (
+            <ApplicationRow 
+              key={application._id} 
+              application={application} 
+              role={auth.user.role} 
+              onUpdate={updateStatus} 
+              onViewPet={() => viewPetDetails(application.pet)} 
+            />
+          ))}
+        </div>
+      )}
       
       {!loading && displayedApplications.length === 0 ? (
         <div className="py-20 text-center flex flex-col items-center">
@@ -242,15 +279,13 @@ function ApplicationRow({ application, role, onUpdate, onViewPet }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {role === "shelter" && (
-            <button
-              onClick={onViewPet}
-              className="flex h-12 items-center gap-2 rounded-xl bg-slate-50 px-5 text-sm font-black text-slate-600 transition-premium hover:bg-slate-100 active:scale-95 border border-slate-200"
-            >
-              <Icon name="search" />
-              Listing
-            </button>
-          )}
+          <button
+            onClick={onViewPet}
+            className="flex h-12 items-center gap-2 rounded-xl bg-slate-50 px-5 text-sm font-black text-slate-600 transition-premium hover:bg-slate-100 active:scale-95 border border-slate-200"
+          >
+            <Icon name="search" />
+            Listing
+          </button>
           <span className={`rounded-xl border-2 px-5 py-3 text-[11px] font-black uppercase tracking-widest shadow-inner ${statusColors[application.status] || "bg-slate-50 text-slate-400 border-slate-200"}`}>
             {application.status.replace(/_/g, " ")}
           </span>

@@ -24,7 +24,7 @@ export function PetDetailView() {
   const [showEdit, setShowEdit] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [reviewForm, setReviewForm] = useState({ rating: "5", comment: "" });
-  const [hasApplied, setHasApplied] = useState(false);
+  const [activeApp, setActiveApp] = useState(null);
   const [checkingApplication, setCheckingApplication] = useState(true);
   
   const notify = (msg) => dispatch(setNotice(msg));
@@ -57,7 +57,7 @@ export function PetDetailView() {
     try {
       const myApps = await apiRequest("/api/applications/my", { token: auth.token });
       const activeApp = myApps.find(app => (app.pet?._id || app.pet) === pet._id);
-      setHasApplied(!!activeApp);
+      setActiveApp(activeApp || null);
     } catch (error) {
       console.error("Failed to check application status", error);
     } finally {
@@ -105,7 +105,7 @@ export function PetDetailView() {
         }
       });
 
-      await apiRequest("/api/applications", { 
+      const newApp = await apiRequest("/api/applications", { 
         token: auth.token, 
         method: "POST", 
         body: { 
@@ -115,7 +115,7 @@ export function PetDetailView() {
         } 
       });
       
-      setHasApplied(true);
+      setActiveApp(newApp);
       
       Swal.fire({
         title: 'Application Submitted!',
@@ -323,15 +323,19 @@ export function PetDetailView() {
           {(auth.user.role === "adopter" || auth.user.role === "foster") ? (
             <div className="flex flex-col gap-6">
               
-              {!checkingApplication && hasApplied ? (
+              {!checkingApplication && activeApp ? (
                 <div className="rounded-[2rem] border-2 border-emerald-500/20 bg-emerald-50 p-8 text-center shadow-lg">
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-[#176f5b] mb-4 shadow-inner">
                     <Icon name="file" />
                   </div>
                   <p className="text-lg font-black text-[#176f5b] mb-2">Application Active!</p>
-                  <p className="text-sm font-bold text-emerald-700/80 leading-relaxed">
-                    Good luck! You've already submitted a request. Check your Applications Dashboard to see updates.
-                  </p>
+                  <span className="inline-block mt-2 rounded-full border-2 border-emerald-200 bg-white px-4 py-1.5 text-xs font-black uppercase tracking-widest text-[#176f5b] shadow-sm">
+                    Status: {activeApp.status.replace(/_/g, " ")}
+                  </span>
+                </div>
+              ) : pet.status !== "available" ? (
+                <div className="rounded-[2rem] border-2 border-slate-200 bg-slate-50 p-8 text-center shadow-soft">
+                  <p className="text-lg font-black text-slate-500">This pet is already {pet.status}.</p>
                 </div>
               ) : (
                 <div className="rounded-[2rem] border-2 border-[#176f5b]/20 bg-gradient-to-b from-[#e7f4ef]/50 to-white p-8 shadow-xl shadow-[#176f5b]/5 relative overflow-hidden">

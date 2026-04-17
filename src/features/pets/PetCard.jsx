@@ -5,7 +5,7 @@ export function PetCard({ pet, image, isFavorite, onFavorite, onSelect, role }) 
   return (
     <article className="card-premium group overflow-hidden">
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
-        <button onClick={onSelect} className="h-full w-full overflow-hidden text-left">
+        <button onClick={onSelect} className="h-full w-full overflow-hidden text-left relative">
           <img
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
             src={image}
@@ -13,6 +13,14 @@ export function PetCard({ pet, image, isFavorite, onFavorite, onSelect, role }) 
           />
           {/* Hover Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+          
+          {pet.status !== "available" && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 backdrop-blur-[2px]">
+              <span className="rounded-2xl bg-slate-800 px-6 py-2 text-xl font-black uppercase tracking-[0.2em] text-white shadow-xl rotate-[-12deg] border-4 border-slate-800">
+                {pet.status}
+              </span>
+            </div>
+          )}
         </button>
 
         {/* Favorite Button - Absolute Positioned on Image */}
