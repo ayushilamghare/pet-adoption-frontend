@@ -96,6 +96,15 @@ export function PetDetailView() {
     }
     
     try {
+      Swal.fire({
+        title: 'Submitting...',
+        text: 'Please wait while we process your application.',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
       await apiRequest("/api/applications", { 
         token: auth.token, 
         method: "POST", 
