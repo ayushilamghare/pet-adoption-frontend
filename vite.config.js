@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     port: 5342,
     proxy: {
-      "/api": "http://localhost:5001"
+      "/api": "https://pet-adoption-backend-15iv.onrender.com"
     }
   }
 });
