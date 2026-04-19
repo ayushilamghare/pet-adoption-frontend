@@ -28,15 +28,64 @@ export function PetForm({ token, onClose, onSaved, initialData }) {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
+  const isValidURL = (urlStr) => {
+    try {
+      const url = new URL(urlStr);
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+      return false;
+    }
+  };
+
   const validate = () => {
     const newErrors = {};
-    if (!form.name.trim()) newErrors.name = "Name is required";
-    if (!form.breed.trim()) newErrors.breed = "Breed is required";
-    if (!form.location.trim()) newErrors.location = "Location is required";
-    if (form.age.value === "" || isNaN(form.age.value) || Number(form.age.value) < 0) {
+    
+    const nameStr = form.name.trim();
+    if (!nameStr) newErrors.name = "Name is required";
+    else if (nameStr.length < 2 || nameStr.length > 50) newErrors.name = "Name must be 2-50 characters";
+
+    const breedStr = form.breed.trim();
+    if (!breedStr) newErrors.breed = "Breed is required";
+    else if (breedStr.length > 50) newErrors.breed = "Breed must be max 50 characters";
+    else if (!/^[a-zA-Z\s]+$/.test(breedStr)) newErrors.breed = "Breed can only contain letters";
+
+    const locStr = form.location.trim();
+    if (!locStr) newErrors.location = "Location is required";
+    else if (locStr.length < 2 || locStr.length > 100) newErrors.location = "Location must be 2-100 characters";
+    else if (!/^[a-zA-Z\s\-,]+$/.test(locStr)) newErrors.location = "Location must be a valid city name";
+
+    if (form.age.value === "" || isNaN(form.age.value)) {
       newErrors.age = "Valid age is required";
+    } else {
+      const val = Number(form.age.value);
+      if (val < 0) newErrors.age = "Age cannot be negative";
+      else if (form.age.unit === "years" && val > 30) newErrors.age = "Max age is 30 years";
+      else if (form.age.unit === "months" && val > 360) newErrors.age = "Max age is 360 months";
+      else if (form.age.unit === "days" && val > 10950) newErrors.age = "Max age is 10950 days";
     }
+
     if (!form.type) newErrors.type = "Listing type is required";
+
+    if (form.images.trim()) {
+      const parts = form.images.split(",").map(i => i.trim()).filter(Boolean);
+      for (const p of parts) {
+        if (!isValidURL(p)) {
+          newErrors.images = "One or more photo URLs are invalid";
+          break;
+        }
+      }
+    }
+
+    if (form.videos.trim()) {
+      const parts = form.videos.split(",").map(i => i.trim()).filter(Boolean);
+      for (const p of parts) {
+        if (!isValidURL(p)) {
+          newErrors.videos = "One or more video URLs are invalid";
+          break;
+        }
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -146,8 +195,8 @@ export function PetForm({ token, onClose, onSaved, initialData }) {
         </div>
 
         <div className="md:col-span-2 space-y-4">
-          <Field label="Photo URLs" value={form.images} onChange={(images) => setForm({ ...form, images })} placeholder="https://..., https://..." />
-          <Field label="Video URLs" value={form.videos} onChange={(videos) => setForm({ ...form, videos })} placeholder="https://..., https://..." />
+          <Field label="Photo URLs" value={form.images} onChange={(images) => setForm({ ...form, images })} placeholder="https://..., https://..." error={errors.images} />
+          <Field label="Video URLs" value={form.videos} onChange={(videos) => setForm({ ...form, videos })} placeholder="https://..., https://..." error={errors.videos} />
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
             Tip: Use commas to separate multiple URLs. High-quality photos increase adoption rates.
           </p>
