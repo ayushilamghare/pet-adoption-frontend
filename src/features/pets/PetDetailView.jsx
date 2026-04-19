@@ -26,6 +26,9 @@ export function PetDetailView() {
   const [reviewForm, setReviewForm] = useState({ rating: "5", comment: "" });
   const [activeApp, setActiveApp] = useState(null);
   const [checkingApplication, setCheckingApplication] = useState(true);
+  const [reviewErrors, setReviewErrors] = useState({});
+  const [applyErrors, setApplyErrors] = useState({});
+  const [inquiryError, setInquiryError] = useState("");
   
   const notify = (msg) => dispatch(setNotice(msg));
   const goBack = () => dispatch(setActiveView("pets"));
@@ -75,15 +78,24 @@ export function PetDetailView() {
   };
 
   const submitReview = async () => {
+    const errs = {};
+    if (!reviewForm.comment.trim()) {
+      errs.comment = "Review comment is required";
+    } else if (reviewForm.comment.trim().length < 10) {
+      errs.comment = "Please write at least 10 characters in your review";
+    }
+    setReviewErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
     try {
-      if (!reviewForm.comment.trim()) return notify("Please enter a comment");
-      await apiRequest("/api/reviews", { 
-        token: auth.token, 
-        method: "POST", 
-        body: { petId: pet._id, rating: Number(reviewForm.rating), comment: reviewForm.comment } 
+      await apiRequest("/api/reviews", {
+        token: auth.token,
+        method: "POST",
+        body: { petId: pet._id, rating: Number(reviewForm.rating), comment: reviewForm.comment }
       });
       notify("Review posted successfully.");
       setReviewForm({ rating: "5", comment: "" });
+      setReviewErrors({});
       loadReviews();
     } catch (error) {
       notify(error.message);
@@ -91,32 +103,53 @@ export function PetDetailView() {
   };
 
   const apply = async () => {
-    if (auth.user.role === "foster" && (!fosterDuration.value || Number(fosterDuration.value) <= 0)) {
-      return notify("Please provide a valid foster duration.");
+    const errs = {};
+
+    if (!answers.trim()) {
+      errs.answers = "Please introduce yourself to the shelter (required)";
+    } else if (answers.trim().length < 20) {
+      errs.answers = "Please write at least 20 characters introducing yourself";
+    } else if (answers.length > 1000) {
+      errs.answers = "Introduction must be under 1000 characters";
     }
-    
+
+    if (auth.user.role === "foster") {
+      if (!fosterDuration.value && fosterDuration.value !== 0) {
+        errs.fosterDuration = "Foster duration is required";
+      } else {
+        const val = Number(fosterDuration.value);
+        if (!Number.isInteger(val) || val <= 0) {
+          errs.fosterDuration = "Foster duration must be a positive whole number";
+        }
+      }
+    }
+
+    setApplyErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
     try {
       Swal.fire({
         title: 'Submitting...',
         text: 'Please wait while we process your application.',
         allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading();
+        didOpen: () => { Swal.showLoading(); }
+      });
+
+      const newApp = await apiRequest("/api/applications", {
+        token: auth.token,
+        method: "POST",
+        body: {
+          petId: pet._id,
+          answers: { note: answers },
+          fosterDuration: auth.user.role === "foster"
+            ? { value: Number(fosterDuration.value), unit: fosterDuration.unit }
+            : undefined
         }
       });
 
-      const newApp = await apiRequest("/api/applications", { 
-        token: auth.token, 
-        method: "POST", 
-        body: { 
-          petId: pet._id, 
-          answers: { note: answers },
-          fosterDuration: auth.user.role === "foster" ? { value: Number(fosterDuration.value), unit: fosterDuration.unit } : undefined
-        } 
-      });
-      
       setActiveApp(newApp);
-      
+      setApplyErrors({});
+
       Swal.fire({
         title: 'Application Submitted!',
         text: 'The shelter has received your request. Check your Applications tab for updates.',
@@ -124,10 +157,9 @@ export function PetDetailView() {
         confirmButtonColor: '#176f5b',
         confirmButtonText: 'Great!'
       });
-      
     } catch (error) {
       Swal.fire({
-        title: 'Error',
+        title: 'Submission Failed',
         text: error.message,
         icon: 'error',
         confirmButtonColor: '#176f5b'
@@ -136,8 +168,26 @@ export function PetDetailView() {
   };
 
   const contact = async () => {
+    if (!message.trim()) {
+      setInquiryError("Please write your question before sending");
+      return;
+    }
+    if (message.trim().length < 5) {
+      setInquiryError("Message must be at least 5 characters");
+      return;
+    }
+    if (message.length > 2000) {
+      setInquiryError("Message is too long (max 2000 characters)");
+      return;
+    }
+    setInquiryError("");
+
     try {
-      await apiRequest("/api/messages", { token: auth.token, method: "POST", body: { receiverId: pet.shelter?._id || pet.shelter, message } });
+      await apiRequest("/api/messages", {
+        token: auth.token,
+        method: "POST",
+        body: { receiverId: pet.shelter?._id || pet.shelter, message }
+      });
       Swal.fire({
         title: 'Message Sent!',
         text: 'Your shelter inquiry has been delivered.',
@@ -258,11 +308,12 @@ export function PetDetailView() {
                     </select>
                   </div>
                   <textarea 
-                    className="w-full min-h-[80px] rounded-2xl border-0 bg-transparent p-0 text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:ring-0 resize-none"
+                    className={`w-full min-h-[80px] rounded-2xl border bg-transparent p-2 text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:ring-0 resize-none transition-premium ${reviewErrors.comment ? "border-red-300" : "border-0"}`}
                     placeholder="Share your interactions with this pet..."
                     value={reviewForm.comment}
-                    onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                    onChange={(e) => { setReviewForm({ ...reviewForm, comment: e.target.value }); if (e.target.value.trim()) setReviewErrors({}); }}
                   />
+                  {reviewErrors.comment && <p className="text-xs font-bold text-red-500">{reviewErrors.comment}</p>}
                   <button onClick={submitReview} className="h-10 px-8 rounded-full bg-[#176f5b] text-sm font-black text-white shadow-lg shadow-[#176f5b]/20 transition-premium hover:bg-[#0f5848] hover:shadow-xl hover:-translate-y-0.5 active:scale-95 self-end">
                     Publish
                   </button>
@@ -349,15 +400,17 @@ export function PetDetailView() {
                   
                   <div className="space-y-5 relative z-10">
                     {auth.user.role === "foster" && (
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <label className="block text-xs font-bold uppercase tracking-widest text-[#176f5b]">Foster Duration</label>
                         <div className="flex items-center gap-3">
                           <input
                             type="number"
+                            min="1"
+                            step="1"
                             placeholder="Amount (e.g. 5)"
-                            className="h-12 flex-1 rounded-xl border border-emerald-200/60 bg-white px-4 text-sm font-bold text-slate-800 outline-none transition-premium focus:border-[#176f5b] focus:ring-4 focus:ring-[#176f5b]/10 shadow-inner"
+                            className={`h-12 flex-1 rounded-xl border bg-white px-4 text-sm font-bold text-slate-800 outline-none transition-premium focus:ring-4 shadow-inner ${applyErrors.fosterDuration ? "border-red-300 focus:border-red-500 focus:ring-red-500/10" : "border-emerald-200/60 focus:border-[#176f5b] focus:ring-[#176f5b]/10"}`}
                             value={fosterDuration.value}
-                            onChange={(e) => setFosterDuration({ ...fosterDuration, value: e.target.value })}
+                            onChange={(e) => { setFosterDuration({ ...fosterDuration, value: e.target.value }); setApplyErrors({ ...applyErrors, fosterDuration: "" }); }}
                           />
                           <select
                             className="h-12 w-[110px] rounded-xl border border-emerald-200/60 bg-white px-3 text-sm font-bold text-slate-800 outline-none transition-premium focus:border-[#176f5b] focus:ring-4 focus:ring-[#176f5b]/10 shadow-inner cursor-pointer"
@@ -369,17 +422,20 @@ export function PetDetailView() {
                             <option value="months">Months</option>
                           </select>
                         </div>
+                        {applyErrors.fosterDuration && <p className="text-xs font-bold text-red-500">{applyErrors.fosterDuration}</p>}
                       </div>
                     )}
                     
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                        <label className="block text-xs font-bold uppercase tracking-widest text-[#176f5b]">Why are you a great match?</label>
                        <textarea 
-                         className="w-full min-h-[140px] rounded-2xl border border-emerald-200/60 bg-white p-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:border-[#176f5b] focus:ring-4 focus:ring-[#176f5b]/10 outline-none resize-none shadow-inner transition-premium"
+                         className={`w-full min-h-[140px] rounded-2xl border bg-white p-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:ring-4 outline-none resize-none shadow-inner transition-premium ${applyErrors.answers ? "border-red-300 focus:border-red-500 focus:ring-red-500/10" : "border-emerald-200/60 focus:border-[#176f5b] focus:ring-[#176f5b]/10"}`}
                          placeholder="Introduce yourself to the shelter..."
                          value={answers} 
-                         onChange={(e) => setAnswers(e.target.value)}
+                         onChange={(e) => { setAnswers(e.target.value); setApplyErrors({ ...applyErrors, answers: "" }); }}
                        />
+                       {applyErrors.answers && <p className="text-xs font-bold text-red-500">{applyErrors.answers}</p>}
+                       <p className="text-[10px] text-slate-400">{answers.length}/1000 characters</p>
                     </div>
 
                     <button 
@@ -396,13 +452,16 @@ export function PetDetailView() {
 
               <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-soft">
                 <h3 className="text-lg font-black text-slate-900 mb-6">Ask the Shelter</h3>
-                <div className="space-y-4">
-                  <textarea 
-                    className="w-full min-h-[100px] rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none resize-none shadow-inner transition-premium"
-                    placeholder="Have a question about diet or behavior?"
-                    value={message} 
-                    onChange={(e) => setMessage(e.target.value)}
-                  />
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <textarea
+                      className={`w-full min-h-[100px] rounded-2xl border bg-slate-50/50 p-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:ring-4 outline-none resize-none shadow-inner transition-premium ${inquiryError ? "border-red-300 focus:border-red-500 focus:ring-red-500/10" : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/10"}`}
+                      placeholder="Have a question about diet or behavior?"
+                      value={message}
+                      onChange={(e) => { setMessage(e.target.value); if (e.target.value.trim()) setInquiryError(""); }}
+                    />
+                    {inquiryError && <p className="text-xs font-bold text-red-500">{inquiryError}</p>}
+                  </div>
                   <button onClick={contact} className="h-12 w-full flex items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-700 transition-premium hover:border-indigo-500 hover:text-indigo-600 active:scale-[0.98]">
                     <Icon name="message" />
                     Send Inquiry

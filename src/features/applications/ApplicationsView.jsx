@@ -233,19 +233,27 @@ function ApplicationRow({ application, role, onUpdate, onViewPet }) {
       confirmButtonText: "Schedule",
       confirmButtonColor: '#8b5cf6',
       preConfirm: () => {
-        return {
-          meet: document.getElementById('swal-meet').value,
-          note: document.getElementById('swal-note').value
-        };
+        const meet = document.getElementById('swal-meet').value;
+        const note = document.getElementById('swal-note').value;
+
+        if (!meet) {
+          Swal.showValidationMessage('Please select a date and time for the meeting');
+          return false;
+        }
+
+        const selectedDate = new Date(meet);
+        const now = new Date();
+        if (selectedDate <= now) {
+          Swal.showValidationMessage('Meeting time must be in the future');
+          return false;
+        }
+
+        return { meet, note };
       }
     });
 
-    if (isConfirmed) {
-      if (formValues && formValues.meet) {
-        onUpdate(application._id, "meet_scheduled", formValues.meet, formValues.note);
-      } else {
-        Swal.fire("Error", "Please select a valid date/time.", "error");
-      }
+    if (isConfirmed && formValues) {
+      onUpdate(application._id, "meet_scheduled", formValues.meet, formValues.note);
     }
   };
 

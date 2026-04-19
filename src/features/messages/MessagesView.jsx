@@ -19,6 +19,7 @@ export function MessagesView() {
   const [conversation, setConversation] = useState([]);
   const [contactFilter, setContactFilter] = useState("");
   const [loading, setLoading] = useState(false);
+  const [messageError, setMessageError] = useState("");
 
   const notify = (text) => dispatch(setNotice(text));
   const selectedContact = contacts.find((c) => c._id === selectedContactId) || conversations.find(c => c.user._id === selectedContactId)?.user;
@@ -64,12 +65,19 @@ export function MessagesView() {
         notify("Choose a contact first.");
         return;
       }
-      if (!message.trim()) return;
-
+      if (!message.trim()) {
+        setMessageError("Message cannot be empty");
+        return;
+      }
+      if (message.length > 2000) {
+        setMessageError("Message is too long (max 2000 characters)");
+        return;
+      }
+      setMessageError("");
       await apiRequest("/api/messages", { token: auth.token, method: "POST", body: { receiverId: selectedContactId, message } });
       setMessage("");
       loadConversation();
-      loadInitialData(); // Refresh conversation list
+      loadInitialData();
     } catch (error) {
       notify(error.message);
     }
@@ -221,21 +229,31 @@ export function MessagesView() {
               </div>
 
               <div className="border-t border-slate-100 p-6 bg-white">
-                <div className="relative flex items-end gap-3">
-                  <div className="flex-1">
-                    <TextArea
-                      placeholder="Type a message..."
-                      value={message}
-                      onChange={setMessage}
-                    />
+                <div className="relative flex flex-col gap-2">
+                  <div className="flex items-end gap-3">
+                    <div className="flex-1">
+                      <TextArea
+                        placeholder="Type a message..."
+                        value={message}
+                        onChange={(val) => { setMessage(val); if (val.trim()) setMessageError(""); }}
+                      />
+                    </div>
+                    <button
+                      onClick={send}
+                      disabled={!message.trim()}
+                      className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#176f5b] text-white shadow-lg shadow-[#176f5b]/20 transition-premium hover:bg-[#0f5848] active:scale-95 disabled:opacity-50"
+                    >
+                      <Icon name="send" />
+                    </button>
                   </div>
-                  <button
-                    onClick={send}
-                    disabled={!message.trim()}
-                    className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#176f5b] text-white shadow-lg shadow-[#176f5b]/20 transition-premium hover:bg-[#0f5848] active:scale-95 disabled:opacity-50"
-                  >
-                    <Icon name="send" />
-                  </button>
+                  {messageError && (
+                    <p className="text-xs font-bold text-red-500">{messageError}</p>
+                  )}
+                  {message.length > 1800 && (
+                    <p className={`text-xs font-bold ${message.length > 2000 ? "text-red-500" : "text-amber-500"}`}>
+                      {message.length}/2000 characters
+                    </p>
+                  )}
                 </div>
               </div>
             </>
