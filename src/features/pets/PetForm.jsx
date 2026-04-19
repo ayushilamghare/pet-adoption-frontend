@@ -54,6 +54,11 @@ export function PetForm({ token, onClose, onSaved, initialData }) {
     else if (locStr.length < 2 || locStr.length > 100) newErrors.location = "Location must be 2-100 characters";
     else if (!/^[a-zA-Z\s\-,]+$/.test(locStr)) newErrors.location = "Location must be a valid city name";
 
+    const colorStr = form.color.trim();
+    if (colorStr && !/^[a-zA-Z\s]+$/.test(colorStr)) {
+      newErrors.color = "Color can only contain letters";
+    }
+
     if (form.age.value === "" || isNaN(form.age.value)) {
       newErrors.age = "Valid age is required";
     } else {
@@ -139,6 +144,7 @@ export function PetForm({ token, onClose, onSaved, initialData }) {
           <div className="grid grid-cols-[1fr_auto] gap-2">
             <input
               type="number"
+              min="0"
               placeholder="2"
               className={classNames("h-12 w-full rounded-xl border bg-white px-4 text-slate-900 outline-none transition-premium focus:ring-4 focus:ring-[#176f5b]/5", errors.age ? "border-red-300 focus:border-red-500" : "border-slate-200 focus:border-[#176f5b]")}
               value={form.age.value}
@@ -187,7 +193,7 @@ export function PetForm({ token, onClose, onSaved, initialData }) {
           </label>
         </div>
 
-        <Field label="Main color" placeholder="E.g. Golden" value={form.color} onChange={(color) => setForm({ ...form, color })} />
+        <Field label="Main color" placeholder="E.g. Golden" value={form.color} onChange={(color) => setForm({ ...form, color })} error={errors.color} />
         <Field label="Current location" placeholder="E.g. Mumbai, MH" value={form.location} onChange={(location) => setForm({ ...form, location })} error={errors.location} />
 
         <div className="md:col-span-2">
